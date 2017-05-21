@@ -1,23 +1,13 @@
 package luna
 
 import (
-	"fmt"
+	// "fmt"
 	"io"
 	"net/http"
 	"net/url"
 	"strings"
 	"time"
 )
-
-type BasicAuth struct {
-	User     string
-	Password string
-}
-
-type File struct {
-	Name string
-	Path string // support absolute path and relative path
-}
 
 // 封装的请求选项，用来构造http.Request
 type ReqOptions struct {
@@ -29,6 +19,8 @@ type ReqOptions struct {
 	BasicAuth BasicAuth
 	Hook      Hook
 	Files     []File
+	proxy     func(*http.Request) (*url.URL, error)
+	proxyURL  string
 }
 
 func NewReqOptions() *ReqOptions {
@@ -58,7 +50,7 @@ func newBody(reqOpt *ReqOptions) (body io.Reader, contentType string, err error)
 	return strings.NewReader(data.Encode()), contentType, nil
 }
 
-func CreateRequest(reqOpt *ReqOptions, method string, url string) (req *http.Request, err error) {
+func createRequest(reqOpt *ReqOptions, method string, url string) (req *http.Request, err error) {
 	//构造body
 	body, contentType, err := newBody(reqOpt)
 	if err != nil {
@@ -69,9 +61,7 @@ func CreateRequest(reqOpt *ReqOptions, method string, url string) (req *http.Req
 	if err != nil {
 		return nil, err
 	}
-	if reqOpt.Headers != nil {
-		mergeHeaders(req, reqOpt, contentType)
-	}
+	mergeHeaders(req, reqOpt, contentType)
 	if reqOpt.BasicAuth.User != "" {
 		req.SetBasicAuth(reqOpt.BasicAuth.User, reqOpt.BasicAuth.Password)
 	}
@@ -79,25 +69,35 @@ func CreateRequest(reqOpt *ReqOptions, method string, url string) (req *http.Req
 }
 
 // 发送请求
-func Request(url string, method string, reqOpt *ReqOptions) (resp *http.Response, err error) {
-	req, err := CreateRequest(reqOpt, method, url)
+func Request(url string, method string, reqOpt *ReqOptions) (resp *Response, err error) {
+	req, err := createRequest(reqOpt, method, url)
 	if err != nil {
 		return nil, err
 	}
 	applyBeforeHooks(req, reqOpt)
 	client := new(http.Client)
+	// set timeout
 	if reqOpt.Timeout != 0 {
 		client.Timeout = time.Duration(reqOpt.Timeout) * time.Millisecond
 	}
-	resp, err = client.Do(req)
-	applyAfterHooks(resp, reqOpt)
+	// set proxy
+	if reqOpt.proxy != nil {
+		client.Transport = &http.Transport{Proxy: reqOpt.proxy}
+	}
+
+	if OriginResp, err := client.Do(req); err != nil
+	if err != nil {
+		return nil, err
+	}
+	applyAfterHooks(OriginResp, reqOpt)
+	resp = &Response{OriginResp, nil}
 	return
 }
 
-func Get(url string, reqOpt *ReqOptions) (resp *http.Response, err error) {
+func Get(url string, reqOpt *ReqOptions) (resp *Response, err error) {
 	return Request(url, "GET", reqOpt)
 }
 
-func Post(url string, reqOpt *ReqOptions) (resp *http.Response, err error) {
+func Post(url string, reqOpt *ReqOptions) (resp *Response, err error) {
 	return Request(url, "Post", reqOpt)
 }

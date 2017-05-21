@@ -7,6 +7,7 @@ import (
 // hook 请求和响应
 // BeforeRequestHook 在请求发送前，对请求hook
 // AfterRequestHook 获取响应后对响应hook
+// TODO 重构Hook，解决只需要对request hook时需要实现AfterRequestHook
 type Hook interface {
 	BeforeRequestHook(req *http.Request) (err error)
 	AfterRequestHook(resp *http.Response) (err error)

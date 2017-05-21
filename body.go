@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"fmt"
+	// "fmt"
 	"io"
 	"mime/multipart"
 	"os"
@@ -56,6 +56,6 @@ func newJsonBody(reqOpt *ReqOptions) (body io.Reader, contentType string, err er
 		return nil, "", err
 	}
 	body = bytes.NewReader(b)
-	fmt.Println(body)
+	// fmt.Println(body)
 	return
 }

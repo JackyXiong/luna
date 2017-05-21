@@ -4,9 +4,11 @@ import (
 	"net/http"
 )
 
+const defaultUserAgent = "go-luna"
+
 var defaultHeaders = map[string]string{
 	"Connection":      "keep-alive",
-	"User-Agent":      "luna",
+	"User-Agent":      defaultUserAgent,
 	"Accept":          "*/*",
 	"Accept-Encoding": "gzip, deflate",
 }
