@@ -74,7 +74,7 @@ func Request(url string, method string, reqOpt *ReqOptions) (resp *Response, err
 	if err != nil {
 		return nil, err
 	}
-	applyBeforeHooks(req, reqOpt)
+	applyReqHook(req, reqOpt)
 	client := new(http.Client)
 	// set timeout
 	if reqOpt.Timeout != 0 {
@@ -85,19 +85,11 @@ func Request(url string, method string, reqOpt *ReqOptions) (resp *Response, err
 		client.Transport = &http.Transport{Proxy: reqOpt.proxy}
 	}
 
-	if OriginResp, err := client.Do(req); err != nil
+	OriginResp, err := client.Do(req)
 	if err != nil {
 		return nil, err
 	}
-	applyAfterHooks(OriginResp, reqOpt)
+	applyRespHook(OriginResp, reqOpt)
 	resp = &Response{OriginResp, nil}
 	return
-}
-
-func Get(url string, reqOpt *ReqOptions) (resp *Response, err error) {
-	return Request(url, "GET", reqOpt)
-}
-
-func Post(url string, reqOpt *ReqOptions) (resp *Response, err error) {
-	return Request(url, "Post", reqOpt)
 }

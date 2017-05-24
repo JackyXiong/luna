@@ -4,27 +4,39 @@ import (
 	"net/http"
 )
 
-// hook 请求和响应
-// BeforeRequestHook 在请求发送前，对请求hook
-// AfterRequestHook 获取响应后对响应hook
-// TODO 重构Hook，解决只需要对request hook时需要实现AfterRequestHook
-type Hook interface {
+type RequestHook interface {
 	BeforeRequestHook(req *http.Request) (err error)
-	AfterRequestHook(resp *http.Response) (err error)
 }
 
-func applyBeforeHooks(req *http.Request, reqOpt *ReqOptions) error {
-	if reqOpt.Hook != nil {
-		err := reqOpt.Hook.BeforeRequestHook(req)
-		return err
+type ResponseHook interface {
+	AfterResponseHook(resp *http.Response) (err error)
+}
+
+type Hook struct {
+	ReqHook  RequestHook  // hook before send request
+	RespHook ResponseHook // hook after get reesponse
+}
+
+func applyReqHook(req *http.Request, reqOpt *ReqOptions) error {
+	if &reqOpt.Hook != nil && reqOpt.Hook.ReqHook != nil {
+		return reqOpt.Hook.ReqHook.BeforeRequestHook(req)
 	}
 	return nil
 }
 
-func applyAfterHooks(resp *http.Response, reqOpt *ReqOptions) error {
-	if reqOpt.Hook != nil {
-		err := reqOpt.Hook.AfterRequestHook(resp)
-		return err
+func applyRespHook(resp *http.Response, reqOpt *ReqOptions) error {
+	if &reqOpt.Hook != nil && reqOpt.Hook.RespHook != nil {
+		return reqOpt.Hook.RespHook.AfterResponseHook(resp)
+	}
+	return nil
+
+}
+
+// convenient function to set hook
+func (reqOpt *ReqOptions) SetHook(reqHook RequestHook, respHook ResponseHook) (err error) {
+	reqOpt.Hook = Hook{
+		ReqHook:  reqHook,
+		RespHook: respHook,
 	}
 	return nil
 }

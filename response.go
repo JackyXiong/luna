@@ -58,7 +58,7 @@ func (r Response) Text() (text string, err error) {
 func (r Response) Json() (json *simplejson.Json, err error) {
 	content, err := r.Content()
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	return simplejson.NewJson(content)
 }
