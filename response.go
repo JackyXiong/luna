@@ -10,30 +10,32 @@ import (
 	"github.com/bitly/go-simplejson"
 )
 
+// Response wrap origin http Response
 type Response struct {
-	*http.Response
+	Resp    *http.Response
 	content []byte
+	History []*http.Response // redirect history
 }
 
-// return response as []byte
+// Content return response as []byte
 func (r Response) Content() (content []byte, err error) {
 	if r.content != nil {
 		return r.content, nil
 	}
 	var reader io.ReadCloser
-	switch r.Header.Get("Content-Encoding") {
+	switch r.Resp.Header.Get("Content-Encoding") {
 	case "gzip":
-		reader, err = gzip.NewReader(r.Body)
+		reader, err = gzip.NewReader(r.Resp.Body)
 		if err != nil {
 			return nil, err
 		}
 	case "deflate":
-		reader, err = zlib.NewReader(r.Body)
+		reader, err = zlib.NewReader(r.Resp.Body)
 		if err != nil {
 			return nil, err
 		}
 	default:
-		reader = r.Body
+		reader = r.Resp.Body
 	}
 	defer reader.Close()
 
@@ -44,7 +46,7 @@ func (r Response) Content() (content []byte, err error) {
 	return content, nil
 }
 
-//return response as text
+// Text return response as text
 func (r Response) Text() (text string, err error) {
 	content, err := r.Content()
 	if err != nil {
@@ -54,8 +56,8 @@ func (r Response) Text() (text string, err error) {
 	return
 }
 
-//return response as json
-func (r Response) Json() (json *simplejson.Json, err error) {
+// JSON return response as json
+func (r Response) JSON() (json *simplejson.Json, err error) {
 	content, err := r.Content()
 	if err != nil {
 		return nil, err

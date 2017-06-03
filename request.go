@@ -1,7 +1,6 @@
 package luna
 
 import (
-	// "fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -21,10 +20,11 @@ type ReqOptions struct {
 	Files     []File
 	proxy     func(*http.Request) (*url.URL, error)
 	proxyURL  string
+	SetReq    func(*http.Request) error // set http.Request attributes
+	SetClient func(*http.Client) error  // set http.Client attributes
 }
 
 func NewReqOptions() *ReqOptions {
-	// headers := map[string]string{}
 	return &ReqOptions{
 		Data:    nil,
 		Headers: nil,
@@ -74,6 +74,9 @@ func Request(url string, method string, reqOpt *ReqOptions) (resp *Response, err
 	if err != nil {
 		return nil, err
 	}
+	if reqOpt.SetReq != nil {
+		reqOpt.SetReq(req)
+	}
 	applyReqHook(req, reqOpt)
 	client := new(http.Client)
 	// set timeout
@@ -84,12 +87,23 @@ func Request(url string, method string, reqOpt *ReqOptions) (resp *Response, err
 	if reqOpt.proxy != nil {
 		client.Transport = &http.Transport{Proxy: reqOpt.proxy}
 	}
-
-	OriginResp, err := client.Do(req)
-	if err != nil {
-		return nil, err
+	if reqOpt.SetClient != nil {
+		err = reqOpt.SetClient(client)
+		if err != nil {
+			return nil, err
+		}
 	}
-	applyRespHook(OriginResp, reqOpt)
-	resp = &Response{OriginResp, nil}
+
+	originResp, err := client.Do(req)
+	if err != nil {
+		return resp, err
+	}
+
+	applyRespHook(originResp, reqOpt)
+	resp = &Response{
+		Resp:    originResp,
+		content: nil,
+		History: nil,
+	}
 	return
 }
